@@ -1,0 +1,34 @@
+# Production overrides — use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  jellyfin:
+    restart: always
+    environment:
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_URL:?Set JELLYFIN_PUBLISHED_URL in .env}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Production volume configuration:
+# For cloud/Kubernetes deployments, replace the named volume with an external volume
+# backed by a Persistent Volume Claim (PVC).
+#
+# Example — external volume (pre-created):
+#   volumes:
+#     jellyfin-media:
+#       external: true
+#
+# Kubernetes PVC example (apply separately):
+#   apiVersion: v1
+#   kind: PersistentVolumeClaim
+#   metadata:
+#     name: jellyfin-media
+#   spec:
+#     accessModes:
+#       - ReadWriteOnce
+#     resources:
+#       requests:
+#         storage: 500Gi
+#     storageClassName: standard
