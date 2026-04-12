@@ -1,7 +1,27 @@
 # Copy this file to terraform.tfvars and fill in your values.
 # NEVER commit terraform.tfvars — it contains secrets.
 
-hcloud_token        = "your-hetzner-api-token"
+# --- OCI Authentication ---
+# Find these in OCI Console > Profile > User Settings
+tenancy_ocid         = "ocid1.tenancy.oc1..your-tenancy-ocid"
+user_ocid            = "ocid1.user.oc1..your-user-ocid"
+api_key_fingerprint  = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+api_private_key_path = "~/.oci/oci_api_key.pem"
+
+# Use tenancy OCID for root compartment, or create a dedicated one
+compartment_ocid = "ocid1.tenancy.oc1..your-tenancy-ocid"
+
+# Region — pick the closest to you
+# Options: ca-toronto-1, ca-montreal-1, us-ashburn-1, us-phoenix-1, etc.
+region = "ca-toronto-1"
+
+# --- SSH ---
 ssh_public_key_path = "~/.ssh/id_ed25519.pub"
-server_type         = "cx33"
-location            = "fsn1"
+
+# --- Instance (Always Free: up to 4 OCPU, 24 GB RAM) ---
+instance_ocpus      = 4
+instance_memory_gb  = 24
+boot_volume_size_gb = 50
+
+# --- Media Storage (Always Free: up to 200 GB block volume) ---
+media_volume_size_gb = 150
