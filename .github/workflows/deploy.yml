@@ -1,0 +1,53 @@
+name: Deploy Jellyfin
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Hetzner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ vars.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/jellyfin
+
+            # Pull latest code
+            git pull origin main
+
+            # Restart services with latest images
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d \
+              --pull always \
+              --remove-orphans
+
+            # Wait for Jellyfin to start
+            echo "Waiting for Jellyfin to become ready..."
+            sleep 10
+
+            # Verify containers are running
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format json
+
+      - name: Health Check
+        run: |
+          echo "Checking https://${{ vars.DOMAIN }}/web/index.html ..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ vars.DOMAIN }}/web/index.html" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 15s..."
+            sleep 15
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1

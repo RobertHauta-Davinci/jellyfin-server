@@ -13,3 +13,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Terraform (also has its own .gitignore in infra/)
+infra/.terraform/
+infra/*.tfstate*
+infra/terraform.tfvars

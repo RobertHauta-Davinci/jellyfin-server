@@ -11,8 +11,9 @@ services:
       - ${CACHE_PATH:-./cache}:/cache
       - ${TRANSCODE_PATH:-./transcodes}:/transcodes
       - jellyfin-media:/media:ro
-    devices:
-      - /dev/dri:/dev/dri   # Intel QSV hardware transcoding
+    # Uncomment for Intel QSV hardware transcoding on Linux hosts:
+    # devices:
+    #   - /dev/dri:/dev/dri
     restart: unless-stopped
     environment:
       - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_URL:-http://localhost:8096}

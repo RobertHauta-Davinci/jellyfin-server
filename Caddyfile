@@ -1,0 +1,11 @@
+{$DOMAIN:localhost} {
+    reverse_proxy jellyfin:8096
+
+    header {
+        Strict-Transport-Security "max-age=63072000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer-when-downgrade"
+        -Server
+    }
+}

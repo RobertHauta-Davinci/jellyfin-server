@@ -3,32 +3,47 @@
 services:
   jellyfin:
     restart: always
+    volumes:
+      - ./config:/config
+      - ./cache:/cache
+      - ./transcodes:/transcodes
+      - /mnt/media:/media:ro
     environment:
-      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_URL:?Set JELLYFIN_PUBLISHED_URL in .env}
+      - JELLYFIN_PublishedServerUrl=https://${DOMAIN:?Set DOMAIN in .env}
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - proxy
 
-# Production volume configuration:
-# For cloud/Kubernetes deployments, replace the named volume with an external volume
-# backed by a Persistent Volume Claim (PVC).
-#
-# Example — external volume (pre-created):
-#   volumes:
-#     jellyfin-media:
-#       external: true
-#
-# Kubernetes PVC example (apply separately):
-#   apiVersion: v1
-#   kind: PersistentVolumeClaim
-#   metadata:
-#     name: jellyfin-media
-#   spec:
-#     accessModes:
-#       - ReadWriteOnce
-#     resources:
-#       requests:
-#         storage: 500Gi
-#     storageClassName: standard
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN:?Set DOMAIN in .env}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

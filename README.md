@@ -91,16 +91,101 @@ docker compose exec jellyfin ls -la /dev/dri
 
 > **Note:** Hardware transcoding via Docker is only supported on Linux hosts. On Windows, Docker Desktop runs inside a VM and cannot pass through the GPU. For WSL2 development, transcoding falls back to software mode unless you configure GPU passthrough in WSL.
 
-## Production Deployment
+## Cloud Deployment (Hetzner)
 
-Use the production override file:
+The production setup runs on a Hetzner Cloud CX33 VM with a Storage Box for media.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+### Architecture
+
+```
+[Hetzner CX33 VM]
+├── Caddy (reverse proxy, auto-HTTPS)
+├── Jellyfin (Docker container)
+├── /opt/jellyfin/config/   → Local NVMe SSD
+├── /opt/jellyfin/cache/    → Local NVMe SSD
+└── /mnt/media/             → Hetzner Storage Box (SMB mount, read-only)
 ```
 
-See `docker-compose.prod.yml` for PVC/Kubernetes volume configuration notes.
+### Initial Setup
+
+1. **Prerequisites:**
+   - Hetzner Cloud account + API token
+   - Hetzner Storage Box (BX11 or larger)
+   - Domain name with DNS pointed to your server
+   - Terraform installed locally
+
+2. **Provision the server:**
+   ```bash
+   cd infra
+   cp terraform.tfvars.example terraform.tfvars
+   # Edit terraform.tfvars with your Hetzner API token and SSH key path
+   terraform init
+   terraform apply
+   ```
+
+3. **Configure Storage Box mount** on the server (SSH in and set up `/etc/fstab`).
+
+4. **Deploy Jellyfin:**
+   ```bash
+   ssh jellyfin@<server-ip>
+   cd /opt/jellyfin
+   cp .env.example .env
+   # Edit .env with your domain
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+
+5. **Set up GitHub Secrets** for CI/CD (see below).
+
+### CI/CD
+
+Pushes to `main` auto-deploy via GitHub Actions.
+
+**Required GitHub Secrets:**
+- `HCLOUD_TOKEN` — Hetzner API token
+- `SSH_PRIVATE_KEY` — SSH key for server access
+- `SERVER_IP` — Hetzner VM IP
+
+**Required GitHub Variables:**
+- `DOMAIN` — your domain (e.g., `media.yourdomain.com`)
+- `SERVER_USER` — SSH user (default: `jellyfin`)
+
+### Pre-Transcoding
+
+To avoid expensive cloud transcoding, pre-transcode media locally before uploading:
+
+```bash
+# Transcode a movie to H.264 MP4 (uses Intel QSV if available)
+./scripts/transcode.sh "input.mkv" "./output/"
+
+# Upload to Storage Box
+./scripts/upload.sh "./output/Movie Name (2024)" movies
+```
+
+### Backups
+
+Config is backed up daily to the Storage Box:
+
+```bash
+./scripts/backup.sh
+```
+
+### Estimated Monthly Cost
+
+| Resource | Cost |
+|----------|------|
+| Hetzner CX33 (4 vCPU, 8 GB RAM) | ~EUR 6.49 |
+| Hetzner Storage Box BX11 (1 TB) | ~EUR 3.20 |
+| **Total** | **~EUR 10/mo (~$15 CAD)** |
+
+## Security
+
+- HTTPS enforced via Caddy with automatic Let's Encrypt certificates
+- Hetzner firewall blocks all ports except 22, 80, 443
+- SSH key-only authentication (password auth disabled)
+- Fail2Ban protects against brute-force login attempts
+- Media mounted read-only in the container
+- See [docs/remote-access.md](docs/remote-access.md) for additional hardening options
 
 ## Remote Access
 
-See [docs/remote-access.md](docs/remote-access.md) for setting up remote access with a reverse proxy.
+See [docs/remote-access.md](docs/remote-access.md) for reverse proxy details, DDNS, and Fail2Ban configuration.

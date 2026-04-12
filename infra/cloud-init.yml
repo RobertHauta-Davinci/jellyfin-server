@@ -1,0 +1,77 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose-plugin
+  - cifs-utils
+  - fail2ban
+  - git
+  - ufw
+
+users:
+  - name: jellyfin
+    groups: docker, sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${SSH_PUBLIC_KEY}
+
+write_files:
+  # SSH hardening
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin no
+      PubkeyAuthentication yes
+      MaxAuthTries 3
+
+  # Fail2Ban SSH jail
+  - path: /etc/fail2ban/jail.d/sshd.conf
+    content: |
+      [sshd]
+      enabled = true
+      port = ssh
+      maxretry = 5
+      bantime = 3600
+      findtime = 600
+
+  # Fail2Ban Jellyfin jail
+  - path: /etc/fail2ban/jail.d/jellyfin.conf
+    content: |
+      [jellyfin]
+      enabled = true
+      port = http,https
+      filter = jellyfin
+      logpath = /opt/jellyfin/config/log/log_*.log
+      maxretry = 5
+      bantime = 3600
+      findtime = 600
+
+  # Fail2Ban Jellyfin filter
+  - path: /etc/fail2ban/filter.d/jellyfin.conf
+    content: |
+      [Definition]
+      failregex = ^.*Authentication request for .* has been denied \(IP: "<ADDR>"\)\.
+      ignoreregex =
+
+runcmd:
+  # Enable and start Docker
+  - systemctl enable --now docker
+
+  # Create media mount point
+  - mkdir -p /mnt/media /opt/jellyfin
+
+  # NOTE: Storage Box mount must be configured manually after provisioning.
+  # Add to /etc/fstab:
+  # //uXXXXXX.your-storagebox.de/backup /mnt/media cifs credentials=/root/.smbcredentials,uid=1000,gid=1000,_netdev,ro 0 0
+
+  # Enable and start fail2ban
+  - systemctl enable --now fail2ban
+
+  # Restart SSH with hardened config
+  - systemctl restart sshd
+
+  # Set ownership
+  - chown -R jellyfin:jellyfin /opt/jellyfin
