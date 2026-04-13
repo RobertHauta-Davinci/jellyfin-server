@@ -1,120 +1,53 @@
 #cloud-config
 package_update: true
-package_upgrade: true
+package_upgrade: false
 
 packages:
   - docker.io
   - docker-compose-plugin
   - fail2ban
   - git
-
-users:
-  - name: jellyfin
-    groups: docker, sudo
-    shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    ssh_import_id: []
-
-write_files:
-  # SSH hardening
-  - path: /etc/ssh/sshd_config.d/99-hardening.conf
-    content: |
-      PasswordAuthentication no
-      PermitRootLogin no
-      PubkeyAuthentication yes
-      MaxAuthTries 3
-
-  # Fail2Ban SSH jail
-  - path: /etc/fail2ban/jail.d/sshd.conf
-    content: |
-      [sshd]
-      enabled = true
-      port = ssh
-      maxretry = 5
-      bantime = 3600
-      findtime = 600
-
-  # Fail2Ban Jellyfin jail
-  - path: /etc/fail2ban/jail.d/jellyfin.conf
-    content: |
-      [jellyfin]
-      enabled = true
-      port = http,https
-      filter = jellyfin
-      logpath = /opt/jellyfin/config/log/log_*.log
-      maxretry = 5
-      bantime = 3600
-      findtime = 600
-
-  # Fail2Ban Jellyfin filter
-  - path: /etc/fail2ban/filter.d/jellyfin.conf
-    content: |
-      [Definition]
-      failregex = ^.*Authentication request for .* has been denied \(IP: "<ADDR>"\)\.
-      ignoreregex =
-
-  # Script to format and mount the block volume on first boot
-  - path: /usr/local/bin/mount-media-volume.sh
-    permissions: "0755"
-    content: |
-      #!/bin/bash
-      # Wait for the block volume to be attached
-      for i in $(seq 1 30); do
-        DISK=$(lsblk -dno NAME,SIZE | grep -v "$(lsblk -dno NAME,SIZE | head -1 | awk '{print $1}')" | head -1 | awk '{print $1}')
-        if [ -n "$DISK" ]; then
-          break
-        fi
-        sleep 5
-      done
-
-      if [ -z "$DISK" ]; then
-        echo "No block volume found"
-        exit 1
-      fi
-
-      DEVICE="/dev/$DISK"
-
-      # Only format if not already formatted
-      if ! blkid "$DEVICE" | grep -q ext4; then
-        mkfs.ext4 -L jellyfin-media "$DEVICE"
-      fi
-
-      mkdir -p /mnt/media
-      echo "LABEL=jellyfin-media /mnt/media ext4 defaults,_netdev,nofail 0 2" >> /etc/fstab
-      mount -a
-
-      # Create media directories
-      mkdir -p /mnt/media/movies /mnt/media/tv /mnt/media/music
-      chown -R 1000:1000 /mnt/media
+  - iptables-persistent
 
 runcmd:
   # Enable and start Docker
   - systemctl enable --now docker
 
-  # Format and mount the block volume for media
-  - /usr/local/bin/mount-media-volume.sh
+  # Create jellyfin user with docker access
+  - useradd -m -s /bin/bash -G docker,sudo jellyfin
+  - echo "jellyfin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/jellyfin
 
-  # Create Jellyfin app directory
-  - mkdir -p /opt/jellyfin
-
-  # Copy SSH keys from ubuntu user to jellyfin user
+  # Copy SSH keys to jellyfin user
   - mkdir -p /home/jellyfin/.ssh
   - cp /home/ubuntu/.ssh/authorized_keys /home/jellyfin/.ssh/authorized_keys
   - chown -R jellyfin:jellyfin /home/jellyfin/.ssh
   - chmod 700 /home/jellyfin/.ssh
   - chmod 600 /home/jellyfin/.ssh/authorized_keys
 
-  # Enable and start fail2ban
-  - systemctl enable --now fail2ban
-
-  # Restart SSH with hardened config
-  - systemctl restart sshd
-
-  # Set ownership
+  # Create app directory
+  - mkdir -p /opt/jellyfin
   - chown -R jellyfin:jellyfin /opt/jellyfin
 
-  # Open firewall ports (Oracle Ubuntu uses iptables by default)
-  - iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-  - iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-  - iptables -I INPUT 6 -m state --state NEW -p udp --dport 443 -j ACCEPT
+  # Format and mount block volume for media
+  - |
+    DISK=$(lsblk -dno NAME,TYPE | awk '$2=="disk"{print $1}' | tail -1)
+    if [ -n "$DISK" ] && [ "$DISK" != "sda" ]; then
+      DEVICE="/dev/$DISK"
+      if ! blkid "$DEVICE" | grep -q ext4; then
+        mkfs.ext4 -L jellyfin-media "$DEVICE"
+      fi
+      mkdir -p /mnt/media
+      echo "LABEL=jellyfin-media /mnt/media ext4 defaults,_netdev,nofail 0 2" >> /etc/fstab
+      mount -a
+      mkdir -p /mnt/media/movies /mnt/media/tv /mnt/media/music
+      chown -R 1000:1000 /mnt/media
+    fi
+
+  # Open firewall ports for HTTP/HTTPS (SSH is already open by default)
+  - iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+  - iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+  - iptables -I INPUT -p udp --dport 443 -j ACCEPT
   - netfilter-persistent save
+
+  # Enable fail2ban
+  - systemctl enable --now fail2ban
