@@ -28,15 +28,12 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:
-      - VPN_SERVICE_PROVIDER=custom
+      - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=wireguard
       - WIREGUARD_PRIVATE_KEY=${WG_PRIVATE_KEY}
-      - WIREGUARD_PRESHARED_KEY=${WG_PRESHARED_KEY}
-      - WIREGUARD_PUBLIC_KEY=${WG_PUBLIC_KEY}
-      - WIREGUARD_ADDRESSES=${WG_ADDRESS:-10.8.0.4/24}
-      - VPN_ENDPOINT_IP=${WG_ENDPOINT_IP}
-      - VPN_ENDPOINT_PORT=${WG_ENDPOINT_PORT:-48573}
-      - DNS_ADDRESS=1.1.1.1
+      - SERVER_COUNTRIES=${VPN_COUNTRY:-United States}
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
       - TZ=${TZ:-America/Toronto}
     ports:
       - "8080:8080"                                           # qBittorrent Web UI
