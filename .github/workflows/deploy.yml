@@ -23,19 +23,19 @@ jobs:
             cd /opt/jellyfin
 
             # Pull latest code
-            git pull origin master
+            sudo -u '#1000' git pull origin master
 
             # Restart services with latest images
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d \
+            sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d \
               --pull always \
               --remove-orphans
 
-            # Wait for Jellyfin to start
-            echo "Waiting for Jellyfin to become ready..."
-            sleep 10
+            # Wait for services to start
+            echo "Waiting for services to become ready..."
+            sleep 30
 
             # Verify containers are running
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format json
+            sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format json
 
       - name: Health Check
         run: |
