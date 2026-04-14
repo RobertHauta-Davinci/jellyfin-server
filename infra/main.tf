@@ -95,6 +95,26 @@ resource "oci_core_security_list" "jellyfin" {
       max = 443
     }
   }
+
+  # qBittorrent — torrent peer connections (TCP)
+  ingress_security_rules {
+    protocol = "6" # TCP
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 56789
+      max = 56789
+    }
+  }
+
+  # qBittorrent — torrent peer connections (UDP)
+  ingress_security_rules {
+    protocol = "17" # UDP
+    source   = "0.0.0.0/0"
+    udp_options {
+      min = 56789
+      max = 56789
+    }
+  }
 }
 
 resource "oci_core_subnet" "jellyfin" {

@@ -24,8 +24,8 @@ runcmd:
   - chmod 700 /home/jellyfin/.ssh
   - chmod 600 /home/jellyfin/.ssh/authorized_keys
 
-  # Create app directory
-  - mkdir -p /opt/jellyfin
+  # Create app directory and arr stack config directories
+  - mkdir -p /opt/jellyfin/{qbittorrent,prowlarr,radarr,sonarr,jellyseerr}
   - chown -R jellyfin:jellyfin /opt/jellyfin
 
   # Format and mount block volume for media
@@ -40,6 +40,7 @@ runcmd:
       echo "LABEL=jellyfin-media /mnt/media ext4 defaults,_netdev,nofail 0 2" >> /etc/fstab
       mount -a
       mkdir -p /mnt/media/movies /mnt/media/tv /mnt/media/music
+      mkdir -p /mnt/media/downloads/movies /mnt/media/downloads/tv
       chown -R 1000:1000 /mnt/media
     fi
 
@@ -47,6 +48,9 @@ runcmd:
   - iptables -I INPUT -p tcp --dport 80 -j ACCEPT
   - iptables -I INPUT -p tcp --dport 443 -j ACCEPT
   - iptables -I INPUT -p udp --dport 443 -j ACCEPT
+  # Open qBittorrent torrent peer port
+  - iptables -I INPUT -p tcp --dport 56789 -j ACCEPT
+  - iptables -I INPUT -p udp --dport 56789 -j ACCEPT
   - netfilter-persistent save
 
   # Enable fail2ban
