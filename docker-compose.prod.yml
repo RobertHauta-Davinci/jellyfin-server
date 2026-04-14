@@ -104,20 +104,6 @@ services:
     networks:
       - proxy
 
-  clamav:
-    restart: always
-    volumes:
-      - /opt/jellyfin/clamav:/var/lib/clamav
-      - /mnt/media:/media:ro
-      - ./scripts/clamscan.sh:/scripts/clamscan.sh:ro
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - proxy
-
   duckdns:
     restart: always
     logging:
