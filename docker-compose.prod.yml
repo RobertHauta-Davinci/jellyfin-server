@@ -41,6 +41,18 @@ services:
     networks:
       - proxy
 
+  gluetun:
+    restart: always
+    volumes:
+      - /opt/jellyfin/gluetun:/gluetun
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - proxy
+
   qbittorrent:
     restart: always
     volumes:
@@ -51,8 +63,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    networks:
-      - proxy
 
   prowlarr:
     restart: always
