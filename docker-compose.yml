@@ -89,6 +89,19 @@ services:
       - jellyseerr-config:/app/config
     restart: unless-stopped
 
+  clamav:
+    image: clamav/clamav:latest
+    container_name: clamav
+    environment:
+      - CLAMAV_NO_CLAMD=false
+      - CLAMAV_NO_FRESHCLAM=false
+      - CLAMAV_NO_MILTERD=true
+    volumes:
+      - clamav-db:/var/lib/clamav
+      - arr-media:/media:ro
+      - ./scripts/clamscan.sh:/scripts/clamscan.sh:ro
+    restart: unless-stopped
+
   duckdns:
     image: lscr.io/linuxserver/duckdns:latest
     container_name: duckdns
@@ -109,3 +122,4 @@ volumes:
   radarr-config:
   sonarr-config:
   jellyseerr-config:
+  clamav-db:
