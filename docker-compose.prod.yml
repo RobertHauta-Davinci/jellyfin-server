@@ -95,7 +95,7 @@ services:
   jellyseerr:
     restart: always
     volumes:
-      - /opt/jellyfin/jellyseerr:/config
+      - /opt/jellyfin/jellyseerr:/app/config
     logging:
       driver: json-file
       options:
