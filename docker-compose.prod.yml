@@ -98,11 +98,6 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
 
   prowlarr:
     restart: always
