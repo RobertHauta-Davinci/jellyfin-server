@@ -37,7 +37,6 @@ services:
       - TZ=${TZ:-America/Toronto}
     ports:
       - "8080:8080"                                           # qBittorrent Web UI
-      - "9696:9696"                                           # Prowlarr Web UI
       - "8191:8191"                                           # FlareSolverr
       - "${TORRENT_PORT:-56789}:${TORRENT_PORT:-56789}"       # Torrent traffic TCP
       - "${TORRENT_PORT:-56789}:${TORRENT_PORT:-56789}/udp"   # Torrent traffic UDP
@@ -76,14 +75,12 @@ services:
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
-    network_mode: "service:gluetun"
-    depends_on:
-      gluetun:
-        condition: service_healthy
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ:-America/Toronto}
+    ports:
+      - "9696:9696"
     volumes:
       - prowlarr-config:/config
     restart: unless-stopped
