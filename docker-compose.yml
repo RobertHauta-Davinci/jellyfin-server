@@ -37,7 +37,6 @@ services:
       - TZ=${TZ:-America/Toronto}
     ports:
       - "8080:8080"                                           # qBittorrent Web UI
-      - "8191:8191"                                           # FlareSolverr
       - "${TORRENT_PORT:-56789}:${TORRENT_PORT:-56789}"       # Torrent traffic TCP
       - "${TORRENT_PORT:-56789}:${TORRENT_PORT:-56789}/udp"   # Torrent traffic UDP
     volumes:
@@ -64,12 +63,10 @@ services:
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
-    network_mode: "service:gluetun"
-    depends_on:
-      gluetun:
-        condition: service_healthy
     environment:
       - TZ=${TZ:-America/Toronto}
+    ports:
+      - "8191:8191"
     restart: unless-stopped
 
   prowlarr:

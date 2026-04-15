@@ -91,6 +91,13 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - proxy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     deploy:
       resources:
         limits:
