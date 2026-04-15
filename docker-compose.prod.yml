@@ -113,11 +113,6 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
 
   radarr:
     restart: always
